@@ -1,61 +1,43 @@
-#!/bin/sh
+#!/bin/bash
 
-# This is the shell script for creating AKS cluster, ACR Repo and a namespace
+# Variables
+resourceGroup="Resour-needed-01"
+aksClusterName="aks-cluster"
+acrName="myacrrepo531"
+namespace="helm-deploy"
 
+# Create resource group
+az group create --name $resourceGroup --location <your-location>
 
+# Create AKS cluster
+az aks create --resource-group $resourceGroup --name $aksClusterName --node-count 2 --generate-ssh-keys
 
-#Create Resource Group
+# Get AKS credentials
+az aks get-credentials --resource-group $resourceGroup --name $aksClusterName
 
-AKS_RESOURCE_GROUP=aks-rg
+# Create ACR repository
+az acr create --resource-group $resourceGroup --name $acrName --sku Basic
 
-AKS_REGION=South India
+# Get ACR login server
+acrLoginServer=$(az acr show --name $acrName --resource-group $resourceGroup --query "loginServer" --output tsv)
 
-# Set Cluster Name
+# Create namespace in AKS cluster
+kubectl create namespace $namespace
 
-AKS_CLUSTER=aks-cluster
+# Grant AKS access to ACR
+az aks update -n $aksClusterName -g $resourceGroup --attach-acr $acrName
 
-# set ACR name
+# Set ACR credentials as Kubernetes secrets
+kubectl create secret docker-registry acr-credentials --namespace $namespace --docker-server=$acrLoginServer --docker-username=<your-acr-username> --docker-password=<your-acr-password> --docker-email=<your-acr-email>
 
-ACR_NAME=myacrrepo531
+# Install Helm in AKS cluster
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/helm/master/scripts/get
 
+# Initialize Helm
+helm init --service-account tiller --tiller-namespace $namespace
 
+# Wait for Helm to be ready
+kubectl rollout status deployment/tiller-deploy -n $namespace
 
-echo $AKS_RESOURCE_GROUP, $AKS_REGION, $AKS_CLUSTER, $ACR_NAME
-
-
-
-# Create Resource Group
-
-az group create --location ${AKS_REGION} --name ${AKS_RESOURCE_GROUP}
-
-
-
-# Create AKS cluster with two worker nodes
-
-az aks create --resource-group ${AKS_RESOURCE_GROUP} --name ${AKS_CLUSTER} --node-count 2 --generate-ssh-keys
-
-
-
-# Create Azure Container Registry
-
-az acr create --resource-group ${AKS_RESOURCE_GROUP} \
-
-                     --name ${ACR_NAME} \
-
-                     --sku Standard \
-
-                     --location ${AKS_REGION}
-
-#Providing required permission for downloading Docker image from ACR into AKS Cluster
-
-az aks update -n ${AKS_CLUSTER} -g ${AKS_RESOURCE_GROUP} --attach-acr ${ACR_NAME}
-
-# Configure Kube Credentials
-
-az aks get-credentials --name ${AKS_CLUSTER}  --resource-group ${AKS_RESOURCE_GROUP}
-
-
-
-# Create a namespace in AKS cluster for Helm deployment
-
-kubectl create namespace helm-deployment
+# Print success message
+echo "AKS cluster, ACR repository, and namespace for Helm deployment created successfully!"

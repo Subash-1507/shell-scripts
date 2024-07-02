@@ -7,7 +7,7 @@ acrName="myacrrepo531"
 namespace="helm-deploy"
 
 # Create resource group
-az group create --name $resourceGroup --location <your-location>
+az group create --name $resourceGroup --location southindia
 
 # Create AKS cluster
 az aks create --resource-group $resourceGroup --name $aksClusterName --node-count 2 --generate-ssh-keys

@@ -2,7 +2,7 @@
 # This is the shell script for creating AKS cluster, ACR Repo and a namespace
 #Create Resource Group
 AKS_RESOURCE_GROUP=aks-rg
-AKS_REGION=eastus
+AKS_REGION=southindia
 # Set Cluster Name
 AKS_CLUSTER=aks-cluster
 # set ACR name
